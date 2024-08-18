@@ -206,6 +206,11 @@ var parseTests = []parseTest{
 	// Valid repetitions.
 	{`((((((((((x{2}){2}){2}){2}){2}){2}){2}){2}){2}))`, ``},
 	{`((((((((((x{1}){2}){2}){2}){2}){2}){2}){2}){2}){2})`, ``},
+
+	// Valid nesting.
+	{strings.Repeat("(", 999) + strings.Repeat(")", 999), ``},
+	{strings.Repeat("(?:", 999) + strings.Repeat(")*", 999), ``},
+	{"(" + strings.Repeat("|", 12345) + ")", ``}, // not nested at all
 }
 
 const testFlags = MatchNL | PerlX | UnicodeGroups
@@ -481,6 +486,8 @@ var invalidRegexps = []string{
 	`a{100000}`,
 	`a{100000,}`,
 	"((((((((((x{2}){2}){2}){2}){2}){2}){2}){2}){2}){2})",
+	strings.Repeat("(", 1000) + strings.Repeat(")", 1000),
+	strings.Repeat("(?:", 1000) + strings.Repeat(")*", 1000),
 	`\Q\E*`,
 }
 
