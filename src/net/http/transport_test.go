@@ -3796,7 +3796,7 @@ func TestTransportRejectsAlphaPort(t *testing.T) {
 		t.Fatalf("got %#v; want *url.Error", err)
 	}
 	got := ue.Err.Error()
-	want := `invalid URL port "123foo"`
+	want := `invalid port ":123foo" after host`
 	if got != want {
 		t.Errorf("got error %q; want %q", got, want)
 	}
@@ -4363,5 +4363,32 @@ func TestNoBodyOnChunked304Response(t *testing.T) {
 
 	if res.Body != NoBody {
 		t.Errorf("Unexpected body on 304 response")
+	}
+}
+
+func TestInvalidHeaderResponse(t *testing.T) {
+	setParallel(t)
+	defer afterTest(t)
+	cst := newClientServerTest(t, h1Mode, HandlerFunc(func(w ResponseWriter, r *Request) {
+		conn, buf, _ := w.(Hijacker).Hijack()
+		buf.Write([]byte("HTTP/1.1 200 OK\r\n" +
+			"Date: Wed, 30 Aug 2017 19:09:27 GMT\r\n" +
+			"Content-Type: text/html; charset=utf-8\r\n" +
+			"Content-Length: 0\r\n" +
+			"Foo : bar\r\n\r\n"))
+		buf.Flush()
+		conn.Close()
+	}))
+	defer cst.close()
+	res, err := cst.c.Get(cst.ts.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if v := res.Header.Get("Foo"); v != "" {
+		t.Errorf(`unexpected "Foo" header: %q`, v)
+	}
+	if v := res.Header.Get("Foo "); v != "bar" {
+		t.Errorf(`bad "Foo " header value: %q, want %q`, v, "bar")
 	}
 }
