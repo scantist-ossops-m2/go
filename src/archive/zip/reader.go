@@ -683,6 +683,9 @@ func (r *Reader) initFileList() {
 		dirs := make(map[string]bool)
 		for _, file := range r.File {
 			name := toValidName(file.Name)
+			if name == "" {
+				continue
+			}
 			for dir := path.Dir(name); dir != "."; dir = path.Dir(dir) {
 				dirs[dir] = true
 			}
@@ -709,8 +712,11 @@ func fileEntryLess(x, y string) bool {
 func (r *Reader) Open(name string) (fs.File, error) {
 	r.initFileList()
 
+	if !fs.ValidPath(name) {
+		return nil, &fs.PathError{Op: "open", Path: name, Err: fs.ErrInvalid}
+	}
 	e := r.openLookup(name)
-	if e == nil || !fs.ValidPath(name) {
+	if e == nil {
 		return nil, &fs.PathError{Op: "open", Path: name, Err: fs.ErrNotExist}
 	}
 	if e.file == nil || strings.HasSuffix(e.file.Name, "/") {
@@ -724,7 +730,7 @@ func (r *Reader) Open(name string) (fs.File, error) {
 }
 
 func split(name string) (dir, elem string, isDir bool) {
-	if name[len(name)-1] == '/' {
+	if len(name) > 0 && name[len(name)-1] == '/' {
 		isDir = true
 		name = name[:len(name)-1]
 	}
